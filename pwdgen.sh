@@ -1,4 +1,7 @@
 #!/bin/sh
+
+## This script uses /dev/urandom to generate passwords with a minimum length of 8.
+
 pwdlen=0
 if [ $# -eq 0 ]
 then
