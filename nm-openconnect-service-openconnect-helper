@@ -1,0 +1,44 @@
+#!/bin/bash
+VPN_IF="vpn0"
+GATEWAYS=($(ip r | grep -v $VPN_IF | grep default | awk -F ' ' '{print $3}'))
+
+vpn_up(){
+    ROUTES=$(cat /tmp/vpn_excl.txt)
+    for ROUTE in $ROUTES
+    do
+        for GATEWAY in ${GATEWAYS[@]}
+        do
+            ip route add $ROUTE via $GATEWAY
+        done
+    done
+}
+
+
+vpn_down(){
+    ROUTES=$(cat /tmp/vpn_excl.txt)
+    for ROUTE in $ROUTES
+    do
+        for GATEWAY in ${GATEWAYS[@]}
+        do
+            ip route del $ROUTE via $GATEWAY
+        done
+    done
+    rm /tmp/vpn_excl.txt
+}
+
+main(){
+    env | sort > /tmp/nm_env.txt
+    [ ! -f /tmp/vpn_excl.txt ] && grep X-CSTP-Split-Exclude /tmp/nm_env.txt | sort | uniq | awk -F '=' '{print $2}' > /tmp/vpn_excl.txt
+    REASON=$(grep reason /tmp/nm_env.txt | awk -F ' ' '{print $2}')
+    if $REASON = "connect"
+    then
+        vpn_up
+    elif $REASON = "disconnect"
+    then
+         vpn_down
+    fi
+    rm /tmp/nm_env.txt
+}
+
+main
+/usr/lib/NetworkManager/nm-openconnect-service-openconnect-helper
